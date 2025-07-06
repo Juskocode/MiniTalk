@@ -9,7 +9,7 @@ volatile sig_atomic_t	g_state = TALKING;
  */
 static void	end_handler(int sig)
 {
-	fputs("\n\t✅ Message received ✅\n", stdout);
+	fputs("Message received ✅\n", stdout);
 	exit(EXIT_SUCCESS);
 }
 
@@ -22,11 +22,6 @@ static void	ack_handler(int sig)
 	g_state = QUIET;
 }
 
-/**
- * send_char - Sends a character bit by bit to server
- * @c: Character to send
- * @kingKai: Server's process ID
- */
 static void	send_char(char c, pid_t p)
 {
 	int	bit;
@@ -46,7 +41,6 @@ static void	send_char(char c, pid_t p)
         while (g_state == TALKING)
 			usleep(42);
 
-		// 🧊
 		g_state = TALKING;
 	}
 }

@@ -19,17 +19,17 @@ static void	handler(int sig, siginfo_t *info, void *more_info)
 		p = info->si_pid;
 
 	/* Build character bit by bit (MSB first) */
-	if (SIGUSR1 == sig)
+	if (sig == SIGUSR1)
 		c |= (0b10000000 >> bit);
-	else if (SIGUSR2 == sig)
+	else if (sig == SIGUSR2)
 		c &= ~(0x80 >> bit);
 	bit++;
 
 	/* Process complete character */
-	if (CHAR_BIT == bit)
+	if (bit == CHAR_BIT)
 	{
 		bit = 0;
-		if ('\0' == c)
+		if (c == '\0')
 		{
 			write(STDOUT_FILENO, "\n", 1);
 			ft_kill(p, SIGUSR2);
