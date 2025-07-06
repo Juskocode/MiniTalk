@@ -10,16 +10,37 @@ CYAN='\033[0;36m'
 WHITE='\033[0;37m'
 NC='\033[0m' # No color
 
-# Check if progress bar should be enabled
+# Default values for flags
 PROGRESS_BAR=false
+MULTIHOST=false
+NUM_CLIENTS=1
+CLIENT_PIDS=()  # Array to track client PIDs
 
 # Parse options
-while getopts "p" opt; do
+while getopts "pm:" opt; do
   case $opt in
-    p) PROGRESS_BAR=true ;;
-    \?) echo "Usage: $0 [-p]"; exit 1 ;;
+    p) PROGRESS_BAR=true ;;   # Enable progress bar
+    m) 
+      MULTIHOST=true
+      NUM_CLIENTS=$OPTARG ;;  # Set number of parallel clients
+    \?) echo "Usage: $0 [-p] [-m number]"; exit 1 ;;
   esac
 done
+
+# Function to handle killing all client processes
+kill_all_clients() {
+    echo -e "${RED}Killing all 42client processes...${NC}"
+    for pid in "${CLIENT_PIDS[@]}"; do
+        kill -TERM "$pid" && echo -e "${YELLOW}Terminated 42client with PID $pid${NC}"
+    done
+    # Clear the array after killing all processes
+    CLIENT_PIDS=()
+    echo -e "${GREEN}All 42client processes terminated.${NC}"
+    exit 0
+}
+
+# Trap SIGINT (Ctrl+C) to kill all clients when the user interrupts the script
+trap kill_all_clients SIGINT
 
 # Find the server's PID by looking for the process name "42server"
 SERVER_PID=$(pgrep -f 42server)
@@ -77,14 +98,18 @@ progress_bar() {
     printf "\r[%-${width}s] %d%%" "$done$remaining" "$percent"
 }
 
-# Loop through each file
-for FILE in "${FILES[@]}"; do
-    echo -e "${CYAN}Running client for file: $FILE${NC}"
+# Function to run the client for each file
+run_client() {
+    FILE=$1
+    SERVER_PID=$2
+    PROGRESS_BAR=$3
+
+    echo -e "${CYAN}Running 42client for file: $FILE${NC}"
     
     # Check if the file exists
     if [[ ! -f "$DIR/$FILE" ]]; then
         echo -e "${RED}File $DIR/$FILE does not exist!${NC}"
-        continue
+        return
     fi
     
     # Get the file size
@@ -115,10 +140,27 @@ for FILE in "${FILES[@]}"; do
 
     echo ""  # Move to the next line after the progress bar
 
-    # Run the client with the file content
-    echo -e "${PURPLE}Time taken for $FILE: ${NC}"
-    time ./client $SERVER_PID "$MESSAGE"
-    
+    # Run the client with the file content in the background
+    time ./42client $SERVER_PID "$MESSAGE" &
+    CLIENT_PIDS+=($!)  # Add the PID of the client to the array
+
     echo -e "${CYAN}-------------------------------------${NC}"
+}
+
+# Loop through each file
+for FILE in "${FILES[@]}"; do
+    for ((i=1; i<=NUM_CLIENTS; i++)); do
+        # Run clients in parallel if MULTIHOST is enabled
+        if [ "$MULTIHOST" = true ]; then
+            run_client "$FILE" "$SERVER_PID" "$PROGRESS_BAR" &
+        else
+            run_client "$FILE" "$SERVER_PID" "$PROGRESS_BAR"
+        fi
+    done
 done
+
+# Wait for all background processes (clients) to finish if running in parallel
+if [ "$MULTIHOST" = true ]; then
+    wait
+fi
 
