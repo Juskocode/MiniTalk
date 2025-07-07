@@ -1,5 +1,16 @@
-# include "minitalk.h"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   client.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: adavid-a <adavid-a@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/07 03:02:13 by adavid-a          #+#    #+#             */
+/*   Updated: 2025/07/07 03:02:15 by adavid-a         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
+#include "minitalk.h"
 /* Global flag for synchronization between client and server */
 volatile sig_atomic_t	g_state = TALKING;
 
@@ -29,18 +40,13 @@ static void	send_char(char c, pid_t p)
 	bit = 0;
 	while (bit < CHAR_BIT)
 	{
-
-		/* Send SIGUSR1 for 1, SIGUSR2 for 0 */
-		if (c & (0x80 >> bit))
+		if (c & (MSB >> bit))
 			ft_kill(p, SIGUSR1);
 		else
 			ft_kill(p, SIGUSR2);
 		bit++;
-
-		/* Wait for server acknowledgment */
-        while (g_state == TALKING)
+		while (g_state == TALKING)
 			usleep(42);
-
 		g_state = TALKING;
 	}
 }
@@ -59,20 +65,16 @@ int	main(int ac, char **av)
 
 	if (ac != 3)
 	{
-		fputs("Usage: ./client <kingKai> \"message\"\n", stderr);
+		fputs("Usage: ./42client <PID> \"message\"\n", stderr);
 		return (EXIT_FAILURE);
 	}
 	p = atoi(av[1]);
 	message = av[2];
-
-	/* Set up signal handlers without siginfo */
 	ft_signal(SIGUSR1, ack_handler, false);
 	ft_signal(SIGUSR2, end_handler, false);
-
 	i = 0;
 	while (message[i])
 		send_char(message[i++], p);
 	send_char('\0', p);
-
 	return (EXIT_SUCCESS);
 }
