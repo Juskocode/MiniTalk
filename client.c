@@ -62,7 +62,7 @@ int	main(int ac, char **av)
 	pid_t	p;
 	char	*message;
 	int		i;
-
+    
 	if (ac != 3)
 	{
 		fputs("Usage: ./42client <PID> \"message\"\n", stderr);
